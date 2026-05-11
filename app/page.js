@@ -10,6 +10,8 @@ import PremiumIOSLoader from "@/components/loading";
 import SmartFarmSimulation from "@/components/simulation";
 import ContactForm from "@/components/ContactForm";
 import AgroBotFooter from "@/components/footer";
+import VideoGallery from "@/components/video";
+import BotImageGallery from "@/components/images";
 export default function Home() {
 
   const [loading, setLoading] = useState(true);
@@ -53,6 +55,16 @@ export default function Home() {
           <AgroBotArchitecture />
         </section>
         
+        {/* VIDEO GALLERY */}
+        <section className="w-screen max-w-[100vw] overflow-hidden">
+          <VideoGallery />
+        </section>
+
+        {/* IMAGE GALLERY */}
+        <section className="w-screen max-w-[100vw] overflow-hidden">
+          <BotImageGallery />
+        </section>
+
         {/* SIMULATION */}
         <section className="w-screen max-w-[100vw] overflow-hidden">
           <SmartFarmSimulation />
