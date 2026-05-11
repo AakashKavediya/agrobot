@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import * as THREE from "three";
 
@@ -11,6 +11,9 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 export default function HeroLandingPage() {
   const mountRef = useRef(null);
 
+  const [backgroundLoaded, setBackgroundLoaded] =
+    useState(false);
+
   useEffect(() => {
     const container = mountRef.current;
 
@@ -20,14 +23,16 @@ export default function HeroLandingPage() {
     const scene = new THREE.Scene();
 
     // CAMERA
-    const camera = new THREE.PerspectiveCamera(
-      40,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000
-    );
+    const camera =
+      new THREE.PerspectiveCamera(
+        40,
+        window.innerWidth /
+          window.innerHeight,
+        0.1,
+        1000
+      );
 
-    // PERFECT SAVED CAMERA POSITION
+    // SAVED CAMERA POSITION
     camera.position.set(
       -33.02,
       -4.10,
@@ -35,11 +40,13 @@ export default function HeroLandingPage() {
     );
 
     // RENDERER
-    const renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
-      powerPreference: "high-performance",
-    });
+    const renderer =
+      new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: false,
+        powerPreference:
+          "high-performance",
+      });
 
     renderer.setSize(
       window.innerWidth,
@@ -47,7 +54,10 @@ export default function HeroLandingPage() {
     );
 
     renderer.setPixelRatio(
-      Math.min(window.devicePixelRatio, 2)
+      Math.min(
+        window.devicePixelRatio,
+        2
+      )
     );
 
     renderer.outputColorSpace =
@@ -56,26 +66,31 @@ export default function HeroLandingPage() {
     renderer.toneMapping =
       THREE.ACESFilmicToneMapping;
 
-    renderer.toneMappingExposure = 1.15;
+    // SOFTER LIGHTING
+    renderer.toneMappingExposure =
+      1.18;
 
     renderer.shadowMap.enabled = true;
 
-    container.appendChild(renderer.domElement);
-
-    // CONTROLS
-    const controls = new OrbitControls(
-      camera,
+    container.appendChild(
       renderer.domElement
     );
 
-    // DISABLE USER MOVEMENT
+    // CONTROLS
+    const controls =
+      new OrbitControls(
+        camera,
+        renderer.domElement
+      );
+
+    // DISABLE MOVEMENT
     controls.enableRotate = false;
 
     controls.enableZoom = false;
 
     controls.enablePan = false;
 
-    // PERFECT SAVED TARGET
+    // TARGET
     controls.target.set(
       -1.73,
       -7.17,
@@ -86,14 +101,17 @@ export default function HeroLandingPage() {
 
     // LIGHTS
     const ambientLight =
-      new THREE.AmbientLight(0xffffff, 2.8);
+      new THREE.AmbientLight(
+        0xffffff,
+        2.5
+      );
 
     scene.add(ambientLight);
 
     const keyLight =
       new THREE.DirectionalLight(
         0xffffff,
-        3
+        2.4
       );
 
     keyLight.position.set(
@@ -106,7 +124,7 @@ export default function HeroLandingPage() {
 
     const rimLight =
       new THREE.DirectionalLight(
-        0xffffff,
+        0xffd9a0,
         1.2
       );
 
@@ -118,7 +136,23 @@ export default function HeroLandingPage() {
 
     scene.add(rimLight);
 
-    // SUNSET BACKGROUND
+    // WARM SUNSET LIGHT
+    const warmLight =
+      new THREE.PointLight(
+        0xff8a3d,
+        1.2,
+        80
+      );
+
+    warmLight.position.set(
+      10,
+      15,
+      10
+    );
+
+    scene.add(warmLight);
+
+    // SUNSET SKY
     const textureLoader =
       new THREE.TextureLoader();
 
@@ -130,6 +164,27 @@ export default function HeroLandingPage() {
           THREE.SRGBColorSpace;
 
         scene.background = texture;
+
+        setBackgroundLoaded(true);
+
+        console.log(
+          "SUNSET SKY LOADED"
+        );
+      },
+
+      undefined,
+
+      (error) => {
+        console.error(
+          "BACKGROUND ERROR:",
+          error
+        );
+
+        // FALLBACK COLOR
+        scene.background =
+          new THREE.Color(
+            "#d36b2c"
+          );
       }
     );
 
@@ -142,22 +197,22 @@ export default function HeroLandingPage() {
     );
 
     // GLTF
-    const loader = new GLTFLoader();
+    const loader =
+      new GLTFLoader();
 
     loader.setDRACOLoader(
       dracoLoader
     );
-
-    let model = null;
 
     // LOAD MODEL
     loader.load(
       "/models/heroLandingPage-v1.glb",
 
       (gltf) => {
-        model = gltf.scene;
+        const model =
+          gltf.scene;
 
-        // PERFECT SAVED MODEL POSITION
+        // MODEL POSITION
         model.position.set(
           25,
           -12.33,
@@ -172,15 +227,30 @@ export default function HeroLandingPage() {
         );
 
         // SCALE
-        model.scale.setScalar(1);
+        model.scale.setScalar(
+          1
+        );
 
-        model.traverse((child) => {
-          if (child.isMesh) {
-            child.castShadow = true;
+        model.traverse(
+          (child) => {
+            if (child.isMesh) {
+              child.castShadow = true;
 
-            child.receiveShadow = true;
+              child.receiveShadow = true;
+
+              // PREMIUM MATERIAL
+              if (
+                child.material
+              ) {
+                child.material.roughness =
+                  0.45;
+
+                child.material.metalness =
+                  0.35;
+              }
+            }
           }
-        });
+        );
 
         scene.add(model);
 
@@ -217,18 +287,19 @@ export default function HeroLandingPage() {
     animate();
 
     // RESIZE
-    const handleResize = () => {
-      camera.aspect =
-        window.innerWidth /
-        window.innerHeight;
+    const handleResize =
+      () => {
+        camera.aspect =
+          window.innerWidth /
+          window.innerHeight;
 
-      camera.updateProjectionMatrix();
+        camera.updateProjectionMatrix();
 
-      renderer.setSize(
-        window.innerWidth,
-        window.innerHeight
-      );
-    };
+        renderer.setSize(
+          window.innerWidth,
+          window.innerHeight
+        );
+      };
 
     window.addEventListener(
       "resize",
@@ -275,24 +346,25 @@ export default function HeroLandingPage() {
         className="absolute inset-0"
       />
 
-      {/* BLACK OVERLAY */}
+      {/* OVERLAY */}
       <div
         className="absolute inset-0 z-10"
         style={{
           background:
-            "linear-gradient(90deg, rgba(0,0,0,0.68) 0%, rgba(0,0,0,0.28) 45%, rgba(0,0,0,0.08) 100%)",
+            "linear-gradient(95deg, rgba(0,0,0,0.58) 0%, rgba(0,0,0,0.18) 50%, rgba(0,0,0,0.04) 100%)",
         }}
       />
 
       {/* CONTENT */}
       <div className="absolute inset-0 z-20 flex items-center">
 
-        <div className="max-w-[680px] px-8 sm:px-14 lg:px-20">
+        <div className="max-w-[520px] px-8 sm:px-14 lg:px-20">
 
           {/* HEADING */}
-          <h1 className="text-white font-black tracking-tight leading-none text-[3rem] sm:text-[4rem] lg:text-[5rem]">
+          <h1 className="text-white font-black tracking-[-0.04em] leading-none text-[2rem] sm:text-[2.6rem] lg:text-[3.2rem] drop-shadow-2xl">
 
             AGROBOT
+
             <span className="text-[#f5a623]">
               .ai
             </span>
@@ -300,21 +372,25 @@ export default function HeroLandingPage() {
           </h1>
 
           {/* DESCRIPTION */}
-          <p className="mt-6 text-[#d1d1d1] text-[1rem] sm:text-[1.1rem] leading-relaxed max-w-[560px]">
+          <p className="mt-5 text-[#d6d6d6] text-[0.82rem] sm:text-[0.9rem] leading-relaxed max-w-[470px] drop-shadow-md">
 
-            AgroBot combines AI, sensors,
-            automation, and precision farming
-            technologies to monitor crops,
-            detect diseases early, and optimize
-            agricultural productivity efficiently.
+            AgroBot combines AI,
+            sensors, automation,
+            and precision farming
+            technologies to monitor
+            crops, detect diseases
+            early, and optimize
+            agricultural productivity
+            efficiently.
 
           </p>
 
           {/* BUTTONS */}
-          <div className="mt-8 flex gap-4">
+          <div className="mt-7 flex gap-4">
 
+            {/* EXPLORE */}
             <button
-              className="px-8 py-4 rounded-2xl font-semibold text-black transition-all duration-300 hover:scale-[1.03]"
+              className="px-6 py-3 rounded-[16px] font-semibold text-black transition-all duration-300 hover:scale-[1.03] hover:shadow-xl"
               style={{
                 backgroundColor:
                   "#f5a623",
@@ -323,11 +399,12 @@ export default function HeroLandingPage() {
               Explore
             </button>
 
+            {/* LEARN MORE */}
             <button
-              className="px-8 py-4 rounded-2xl border border-[#555] text-white font-semibold backdrop-blur-md hover:border-[#888] transition-all duration-300"
+              className="px-6 py-3 rounded-[16px] border border-[#666] text-white font-semibold backdrop-blur-md hover:border-[#999] transition-all duration-300"
               style={{
                 backgroundColor:
-                  "rgba(255,255,255,0.04)",
+                  "rgba(255,255,255,0.06)",
               }}
             >
               Learn More
@@ -338,6 +415,15 @@ export default function HeroLandingPage() {
         </div>
 
       </div>
+
+      {/* LOADING */}
+      {!backgroundLoaded && (
+        <div className="absolute bottom-5 right-5 z-50 text-white/50 text-xs">
+
+          Loading Sunset Sky...
+
+        </div>
+      )}
 
     </div>
   );

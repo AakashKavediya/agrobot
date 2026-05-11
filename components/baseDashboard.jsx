@@ -976,8 +976,7 @@ export default function IoTDashboard() {
   return (
     <div
       style={{
-        height: '100vh',
-        overflow: 'hidden',
+        minHeight: '100vh',
         background: '#000000',
         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", sans-serif',
         color: '#FFFFFF',
@@ -995,7 +994,7 @@ export default function IoTDashboard() {
         }}
       />
 
-      <div style={{ position: 'relative', zIndex: 1, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column' }}>
         <div
           style={{
             height: 52,
@@ -1007,6 +1006,9 @@ export default function IoTDashboard() {
             borderBottom: '0.5px solid rgba(255, 255, 255, 0.08)',
             background: 'rgba(0, 0, 0, 0.7)',
             backdropFilter: 'blur(20px)',
+            position: 'sticky',
+            top: 0,
+            zIndex: 100,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
@@ -1047,18 +1049,15 @@ export default function IoTDashboard() {
 
         <div
           style={{
-            flex: 1,
-            minHeight: 0,
             display: 'flex',
             flexWrap: 'wrap',
             gap: 12,
             padding: '14px 16px',
-            overflowY: 'auto',
           }}
         >
           {/* LEFT COLUMN */}
           <div style={{ flex: '1.2 1 280px', minWidth: 260, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <Card style={{ padding: 0, overflow: 'hidden', minHeight: 280, flex: '1 1 auto' }}>
+            <Card style={{ padding: 0, overflow: 'hidden', minHeight: 280 }}>
               <BotViewer3D
                 direction={sensors.direction}
                 speed={sensors.speed}
@@ -1162,7 +1161,7 @@ export default function IoTDashboard() {
               ))}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, flex: '1 1 auto', minHeight: 180 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
               {[
                 { data: snapshots.temp, key: 'temp', color: colors.temp, label: 'Temperature', unit: '°C' },
                 { data: snapshots.humidity, key: 'humidity', color: colors.humidity, label: 'Humidity', unit: '%' },
@@ -1170,7 +1169,7 @@ export default function IoTDashboard() {
               ].map((chart) => (
                 <Card key={chart.key} style={{ display: 'flex', flexDirection: 'column', padding: '12px 12px' }}>
                   <Label color={chart.color}>{chart.label} · live</Label>
-                  <div style={{ flex: 1, minHeight: 130 }}>
+                  <div style={{ height: 180 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={chart.data} margin={{ top: 4, right: 2, bottom: 0, left: -18 }}>
                         <defs>
@@ -1311,7 +1310,7 @@ export default function IoTDashboard() {
               ))}
             </div>
 
-            <Card style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 200 }}>
+            <Card style={{ display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
                 {Object.entries(weatherCharts).map(([key, cfg]) => (
                   <button
@@ -1334,7 +1333,7 @@ export default function IoTDashboard() {
                   </button>
                 ))}
               </div>
-              <div style={{ flex: 1, minHeight: 160 }}>
+              <div style={{ height: 200 }}>
                 {wxHist.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={wxHist} margin={{ top: 4, right: 4, bottom: 0, left: -18 }}>
