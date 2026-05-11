@@ -9,6 +9,9 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from 'recharts';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 
 // =========================== UTILITIES & HELPERS ===========================
 const fmt = (v, unit = '') => (v != null ? `${v}${unit}` : '—');
@@ -522,38 +525,18 @@ const BotViewer3D = ({ direction, speed, onPathUpdate }) => {
     if (!mountRef.current) return;
     let cancelled = false;
 
-    const initThree = async () => {
+    const initThree = () => {
       try {
-        const loadScript = (src) => {
-          return new Promise((resolve, reject) => {
-            if (document.querySelector(`script[src="${src}"]`)) {
-              resolve();
-              return;
-            }
-            const script = document.createElement('script');
-            script.src = src;
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
-          });
-        };
-
-        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
-        await loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js');
-        await loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js');
-        
         if (!cancelled) {
           initScene();
         }
       } catch (err) {
-        console.error('Failed to load Three.js libraries:', err);
-        setLoadError('Failed to load 3D libraries');
+        console.error('Failed to initialize Three.js:', err);
+        setLoadError('Failed to initialize 3D viewer');
       }
     };
 
     const initScene = () => {
-      const THREE = window.THREE;
-      if (!THREE || !mountRef.current) return;
       
       const container = mountRef.current;
       const width = container.clientWidth || 320;
@@ -627,8 +610,8 @@ const BotViewer3D = ({ direction, speed, onPathUpdate }) => {
       scene.add(botGroup);
 
       // Load custom model
-      const gltfLoader = new THREE.GLTFLoader();
-      const dracoLoader = new THREE.DRACOLoader();
+      const gltfLoader = new GLTFLoader();
+      const dracoLoader = new DRACOLoader();
       dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
       gltfLoader.setDRACOLoader(dracoLoader);
 
@@ -977,11 +960,15 @@ export default function IoTDashboard() {
     <div
       style={{
         minHeight: '100vh',
+        maxWidth: '100vw',
+        width: '100%',
+        overflowX: 'hidden',
         background: '#000000',
         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", sans-serif',
         color: '#FFFFFF',
         display: 'flex',
         flexDirection: 'column',
+        boxSizing: 'border-box',
       }}
     >
       <div
@@ -1053,6 +1040,9 @@ export default function IoTDashboard() {
             flexWrap: 'wrap',
             gap: 12,
             padding: '14px 16px',
+            boxSizing: 'border-box',
+            width: '100%',
+            maxWidth: '100vw',
           }}
         >
           {/* LEFT COLUMN */}
