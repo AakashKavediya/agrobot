@@ -15,7 +15,7 @@ export default function VideoGallery() {
       subtitle: "AI-Powered Field Navigation",
       description: "AgroBot navigates autonomously through crop rows using advanced computer vision and GPS-guided path planning.",
       stats: "2.5 km/h · 98% Accuracy",
-      src: "/videos/navigation.mp4",
+      src: "/videos/one.mp4",
       color: "#FF6B00"
     },
     {
@@ -24,7 +24,7 @@ export default function VideoGallery() {
       subtitle: "Real-time Crop Health Monitoring",
       description: "Advanced AI algorithms detect early signs of crop diseases with 98% accuracy, enabling immediate treatment response.",
       stats: "3 sec/plant · 94% Early Detection",
-      src: "/videos/disease.mp4",
+      src: "/videos/two.mp4",
       color: "#30D158"
     },
     {
@@ -33,7 +33,7 @@ export default function VideoGallery() {
       subtitle: "Targeted Treatment System",
       description: "Precision spraying technology reduces pesticide usage by 60% while maximizing crop protection effectiveness.",
       stats: "60% Less Waste · 95% Coverage",
-      src: "/videos/spraying.mp4",
+      src: "/videos/three.mp4",
       color: "#0A84FF"
     }
   ];
