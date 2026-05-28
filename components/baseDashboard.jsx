@@ -12,6 +12,7 @@ import {
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
+import { useMQTT, useRealSensors } from '../hooks/useMQTT';
 
 // =========================== UTILITIES & HELPERS ===========================
 const fmt = (v, unit = '') => (v != null ? `${v}${unit}` : '—');
@@ -96,97 +97,7 @@ const useMumbaiWeather = () => {
   return { wx, wxHist };
 };
 
-const useFakeSensors = () => {
-  const [sensors, setSensors] = useState({
-    temp: 28.4,
-    humidity: 62,
-    soil: 47,
-    water: 'Medium',
-    speed: 120,
-    direction: 'STOP',
-  });
-
-  const histRef = useRef({
-    temp: generateSeedData(28, 2, 20),
-    humidity: generateSeedData(62, 5, 20),
-    soil: generateSeedData(47, 8, 20),
-  });
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setSensors((prev) => {
-        const newTemp = +(prev.temp + (Math.random() - 0.5) * 0.5).toFixed(1);
-        const newHum = Math.min(100, Math.max(0, +(prev.humidity + (Math.random() - 0.5) * 1.5).toFixed(1)));
-        const newSoil = Math.min(100, Math.max(0, +(prev.soil + (Math.random() - 0.5) * 2).toFixed(1)));
-        const ts = Date.now();
-
-        const pushHistory = (arr, val) => {
-          const newArr = [...arr, { t: ts, v: val }];
-          return newArr.length > 60 ? newArr.slice(-60) : newArr;
-        };
-
-        histRef.current.temp = pushHistory(histRef.current.temp, newTemp);
-        histRef.current.humidity = pushHistory(histRef.current.humidity, newHum);
-        histRef.current.soil = pushHistory(histRef.current.soil, newSoil);
-
-        let waterStatus = 'Medium';
-        if (newSoil < 25) waterStatus = 'Low';
-        else if (newSoil > 70) waterStatus = 'Full';
-
-        return {
-          ...prev,
-          temp: newTemp,
-          humidity: newHum,
-          soil: newSoil,
-          water: waterStatus,
-        };
-      });
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const setDirection = (dir) => setSensors((p) => ({ ...p, direction: dir }));
-  const setSpeed = (spd) => setSensors((p) => ({ ...p, speed: +spd }));
-
-  return { sensors, histRef, setDirection, setSpeed };
-};
-
-const useMQTT = (setDirection, setSpeed) => {
-  const [connected, setConnected] = useState(false);
-  const clientRef = useRef(null);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.mqtt) return;
-
-    const client = window.mqtt.connect(
-      'wss://de740a3cc40d4fa89e921c2d6b25ce62.s1.eu.hivemq.cloud:8884/mqtt',
-      {
-        username: 'Aakash_Kavediya',
-        password: 'Aakash@2006',
-        reconnectPeriod: 3000,
-      }
-    );
-
-    clientRef.current = client;
-    client.on('connect', () => setConnected(true));
-    client.on('close', () => setConnected(false));
-    client.on('error', (e) => console.error('MQTT error:', e));
-
-    return () => client.end(true);
-  }, []);
-
-  const publish = useCallback(
-    (topic, value) => {
-      clientRef.current?.publish(topic, String(value));
-      if (topic === 'tank/control') setDirection(value);
-      if (topic === 'tank/speed') setSpeed(value);
-    },
-    [setDirection, setSpeed]
-  );
-
-  return { connected, publish };
-};
+// Real MQTT + sensor hooks are provided by hooks/useMQTT.js
 
 // =========================== UI COMPONENTS ===========================
 const Card = ({ children, style = {}, glowColor = null }) => (
@@ -318,6 +229,250 @@ const Toggle = ({ on, onToggle, color = '#30D158' }) => (
     />
   </div>
 );
+
+// =========================== ESP-CAM VIEWER ===========================
+const FILTERS = {
+  none:    { label: 'Normal',  css: 'none' },
+  night:   { label: 'Night',   css: 'brightness(0.7) contrast(1.3) saturate(0.3) hue-rotate(210deg)' },
+  warm:    { label: 'Warm',    css: 'sepia(0.4) saturate(1.5) brightness(1.05)' },
+  cool:    { label: 'Cool',    css: 'saturate(0.8) hue-rotate(20deg) brightness(0.95) contrast(1.1)' },
+  bw:      { label: 'B&W',     css: 'grayscale(1) contrast(1.2)' },
+  thermal: { label: 'Thermal', css: 'hue-rotate(270deg) saturate(3) contrast(1.4)' },
+};
+
+const CLASS_COLORS = {
+  person: '#FF453A', car: '#FFD60A', truck: '#FF9F0A', bus: '#FF6B35',
+  bicycle: '#30D158', motorcycle: '#30AAFF', cat: '#BF5AF2', dog: '#FF2D55',
+  bird: '#64D2FF', bottle: '#5E5CE6', chair: '#8E8E93',
+};
+
+const EspCamViewer = () => {
+  const STREAM_URL = '/api/cam';
+  const [filter, setFilter] = useState('none');
+  const [detectionEnabled, setDetectionEnabled] = useState(true);
+  const [modelLoaded, setModelLoaded] = useState(false);
+  const [modelLoading, setModelLoading] = useState(false);
+  const [camError, setCamError] = useState(false);
+  const [detections, setDetections] = useState([]);
+  const [fps, setFps] = useState(0);
+
+  const imgRef = useRef(null);
+  const canvasRef = useRef(null);
+  const modelRef = useRef(null);
+  const animFrameRef = useRef(null);
+  const runningRef = useRef(false);
+  const fpsCountRef = useRef({ count: 0, last: performance.now() });
+  const triedAlternateRef = useRef(false);
+
+  // Load TF scripts (only once)
+  useEffect(() => {
+    let cancelled = false;
+    const loadScript = (src) =>
+      new Promise((res, rej) => {
+        if (document.querySelector(`script[src="${src}"]`)) return res();
+        const s = document.createElement('script');
+        s.src = src;
+        s.async = true;
+        s.onload = () => res();
+        s.onerror = (e) => rej(e);
+        document.head.appendChild(s);
+      });
+
+    const ensureModel = async () => {
+      if (window.cocoSsd && window.tf) {
+        console.log('[CAM] TF scripts already present');
+      } else {
+        console.log('[CAM] TF scripts loading...');
+        try {
+          await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js');
+          await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js');
+        } catch (e) {
+          console.error('[CAM] TF script load failed', e);
+          return;
+        }
+      }
+
+      if (cancelled) return;
+      try {
+        setModelLoading(true);
+        // model loader attaches to window.cocoSsd
+        modelRef.current = await window.cocoSsd.load();
+        setModelLoaded(true);
+        console.log('[CAM] COCO-SSD model loaded ✅');
+      } catch (e) {
+        console.error('[CAM] Model load failed', e);
+      } finally {
+        setModelLoading(false);
+      }
+    };
+
+    ensureModel();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Detection loop
+  useEffect(() => {
+    if (!detectionEnabled || !modelLoaded) return;
+    const img = imgRef.current;
+    const canvas = canvasRef.current;
+    const model = modelRef.current;
+    if (!img || !canvas || !model) return;
+
+    let running = true;
+    runningRef.current = true;
+
+    const ctx = canvas.getContext('2d');
+
+    const loop = async () => {
+      if (!running || !runningRef.current) return;
+      animFrameRef.current = requestAnimationFrame(loop);
+
+      if (img.naturalWidth > 0 && !camError) {
+        const clientW = img.clientWidth;
+        const clientH = img.clientHeight;
+        canvas.width = clientW;
+        canvas.height = clientH;
+        ctx.clearRect(0, 0, clientW, clientH);
+
+        try {
+          const preds = await model.detect(img);
+          const good = preds.filter(p => p.score >= 0.45);
+
+          // draw boxes
+          good.forEach((p) => {
+            const [x, y, w, h] = p.bbox;
+            const scaleX = clientW / img.naturalWidth;
+            const scaleY = clientH / img.naturalHeight;
+            const rx = x * scaleX;
+            const ry = y * scaleY;
+            const rw = w * scaleX;
+            const rh = h * scaleY;
+            const cls = p.class || 'object';
+            const color = CLASS_COLORS[cls] ?? '#0A84FF';
+
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = color;
+            ctx.strokeRect(rx, ry, rw, rh);
+
+            // label background
+            const label = `${cls} ${(p.score * 100).toFixed(0)}%`;
+            ctx.font = 'bold 11px -apple-system, system-ui, sans-serif';
+            const textW = ctx.measureText(label).width;
+            const pad = 6;
+            ctx.fillStyle = color + 'CC';
+            ctx.fillRect(rx, Math.max(0, ry - 18), textW + pad, 18);
+
+            // text
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillText(label, rx + 4, Math.max(11, ry - 5));
+          });
+
+          // update state
+          setDetections(good);
+          console.log('[CAM RX] frame detected:', good);
+
+          // fps
+          const now = performance.now();
+          fpsCountRef.current.count++;
+          if (now - fpsCountRef.current.last >= 1000) {
+            setFps(fpsCountRef.current.count);
+            fpsCountRef.current.count = 0;
+            fpsCountRef.current.last = now;
+          }
+        } catch (e) {
+          console.warn('[CAM] detection error', e);
+        }
+      }
+    };
+
+    // start
+    animFrameRef.current = requestAnimationFrame(loop);
+
+    return () => {
+      running = false;
+      runningRef.current = false;
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    };
+  }, [detectionEnabled, modelLoaded, camError]);
+
+  const handleRetry = () => {
+    triedAlternateRef.current = false;
+    setCamError(false);
+    if (imgRef.current) {
+      imgRef.current.src = STREAM_URL + '?_t=' + Date.now();
+    }
+  };
+
+  const handleImgError = () => {
+    // try a secondary probe endpoint once before showing error
+    if (!triedAlternateRef.current) {
+      triedAlternateRef.current = true;
+      if (imgRef.current) imgRef.current.src = STREAM_URL + '?_probe=1&_t=' + Date.now();
+      return;
+    }
+    setCamError(true);
+  };
+
+  return (
+    <Card style={{ padding: 0 }}>
+      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Label color="#0A84FF">📷 ESP-CAM LIVE</Label>
+          <div style={{ width: 10, height: 10, borderRadius: 6, background: camError ? '#8E8E93' : '#FF453A', boxShadow: camError ? 'none' : '0 0 10px rgba(255,69,58,0.6)', animation: camError ? 'none' : 'pulse 1.6s infinite' }} />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ fontSize: 11, color: '#8E8E93', fontWeight: 600, marginRight: 6 }}>DETECT</div>
+          <Toggle on={detectionEnabled} onToggle={() => setDetectionEnabled(v => !v)} color="#0A84FF" />
+          <div style={{ fontSize: 11, color: '#8E8E93', marginLeft: 8 }}>
+            {modelLoading ? 'Loading model...' : modelLoaded ? `FPS: ${fps}` : ''}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ padding: '8px 12px', overflowX: 'auto', display: 'flex', gap: 8 }}>
+        {Object.entries(FILTERS).map(([k, v]) => (
+          <button key={k} onClick={() => setFilter(k)} style={{ padding: '8px 12px', borderRadius: 10, border: 'none', background: filter === k ? 'rgba(10,132,255,0.12)' : 'rgba(255,255,255,0.02)', color: filter === k ? '#0A84FF' : '#8E8E93', fontWeight: 600, cursor: 'pointer' }}>
+            {v.label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ position: 'relative', minHeight: 220, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {camError ? (
+          <div style={{ color: '#FF453A', textAlign: 'center', padding: 16 }}>
+            <div style={{ fontWeight: 700, marginBottom: 8 }}>Cannot reach {STREAM_URL}</div>
+            <div style={{ marginBottom: 12 }}>Ensure ESP-CAM is on the same WiFi network</div>
+            <button onClick={handleRetry} style={{ padding: '8px 12px', borderRadius: 10, background: 'rgba(255,69,58,0.12)', border: 'none', color: '#FF453A', cursor: 'pointer' }}>Retry</button>
+          </div>
+        ) : (
+          <>
+            <img
+              ref={imgRef}
+              src={STREAM_URL}
+              crossOrigin="anonymous"
+              onError={handleImgError}
+              alt="ESP-CAM"
+              style={{ width: '100%', height: 'auto', display: 'block', filter: FILTERS[filter].css }}
+            />
+            <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
+          </>
+        )}
+      </div>
+
+      {detectionEnabled && detections?.length > 0 && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: '10px 12px' }}>
+          {detections.map((d, i) => (
+            <div key={i} style={{ padding: '6px 10px', borderRadius: 12, background: (CLASS_COLORS[d.class] ?? '#0A84FF') + '20', color: CLASS_COLORS[d.class] ?? '#0A84FF', fontWeight: 700, fontSize: 12 }}>
+              {d.class} {(d.score * 100).toFixed(0)}%
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+};
+
 
 const WaterBar = ({ level }) => {
   const levels = { Low: 0.2, Medium: 0.55, Full: 0.85 };
@@ -885,8 +1040,8 @@ const BotViewer3D = ({ direction, speed, onPathUpdate }) => {
 
 // =========================== MAIN DASHBOARD ===========================
 export default function IoTDashboard() {
-  const { sensors, histRef, setDirection, setSpeed } = useFakeSensors();
-  const { connected, publish } = useMQTT(setDirection, setSpeed);
+  const { connected, publish, clientRef } = useMQTT();
+  const { sensors, histRef, setDirection, setSpeed } = useRealSensors(clientRef);
   const { wx, wxHist } = useMumbaiWeather();
 
   const [relay1, setRelay1] = useState(false);
@@ -937,6 +1092,19 @@ export default function IoTDashboard() {
   const selectGear = (g) => {
     setGear(g);
     publish('tank/speed', String(gearSpeeds[g]));
+  };
+  // Also update local sensor state immediately so UI reflects commanded state
+  const startMoveLocal = (cmd) => {
+    setDirection(cmd);
+    startMove(cmd);
+  };
+  const stopMoveLocal = () => {
+    setDirection('STOP');
+    stopMove();
+  };
+  const selectGearLocal = (g) => {
+    setSpeed(gearSpeeds[g]);
+    selectGear(g);
   };
 
   const weatherCharts = {
@@ -1071,14 +1239,14 @@ export default function IoTDashboard() {
                 {directionButtons.map((btn) => (
                   <button
                     key={btn.id}
-                    onMouseDown={() => (btn.cmd === 'STOP' ? stopMove() : startMove(btn.cmd))}
-                    onMouseUp={stopMove}
-                    onMouseLeave={stopMove}
+                    onMouseDown={() => (btn.cmd === 'STOP' ? stopMoveLocal() : startMoveLocal(btn.cmd))}
+                    onMouseUp={stopMoveLocal}
+                    onMouseLeave={stopMoveLocal}
                     onTouchStart={(e) => {
                       e.preventDefault();
-                      btn.cmd === 'STOP' ? stopMove() : startMove(btn.cmd);
+                      btn.cmd === 'STOP' ? stopMoveLocal() : startMoveLocal(btn.cmd);
                     }}
-                    onTouchEnd={stopMove}
+                    onTouchEnd={stopMoveLocal}
                     style={{
                       gridColumn: btn.col,
                       gridRow: btn.row,
@@ -1108,7 +1276,7 @@ export default function IoTDashboard() {
                 {[1, 2, 3, 4, 5, 6].map((g) => (
                   <button
                     key={g}
-                    onClick={() => selectGear(g)}
+                    onClick={() => selectGearLocal(g)}
                     style={{
                       padding: '8px 0',
                       borderRadius: 12,
@@ -1210,6 +1378,9 @@ export default function IoTDashboard() {
                   </div>
                 </div>
               </Card>
+              <div style={{ marginTop: 12 }}>
+                <EspCamViewer />
+              </div>
               <Card>
                 <Label>Servo angle</Label>
                 <Value color="#BF5AF2" size={20}>
