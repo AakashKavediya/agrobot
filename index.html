@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AgroBot MQTT Dashboard</title>
+
+    <!-- MQTT Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js">
+    </script>
+
+    <style>
+        /* ── Reset & Base ── */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f5;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+
+        /* ── Header ── */
+        .header {
+            background: white;
+            padding: 20px 24px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        .header h1 {
+            font-size: 22px;
+            color: #1a1a1a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .status-badge {
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .status-badge.connected {
+            background: #f6ffed;
+            color: #52c41a;
+            border: 1px solid #b7eb8f;
+        }
+        .status-badge.connecting {
+            background: #fffbe6;
+            color: #faad14;
+            border: 1px solid #ffe58f;
+        }
+        .status-badge.disconnected {
+            background: #fff2f0;
+            color: #ff4d4f;
+            border: 1px solid #ffccc7;
+        }
+
+        .btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #1890ff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #40a9ff;
+        }
+        .btn-danger {
+            background: #ff4d4f;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #ff7875;
+        }
+        .btn-success {
+            background: #52c41a;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #73d13d;
+        }
+        .btn-warning {
+            background: #faad14;
+            color: white;
+        }
+        .btn-warning:hover {
+            background: #ffc53d;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .msg-count {
+            color: #666;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* ── Connection Settings ── */
+        .settings-card {
+            background: white;
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .settings-card label {
+            font-weight: 600;
+            font-size: 13px;
+            color: #333;
+        }
+
+        .settings-card input {
+            padding: 8px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 8px;
+            font-size: 13px;
+            background: #fafafa;
+            transition: border-color 0.2s;
+        }
+        .settings-card input:focus {
+            outline: none;
+            border-color: #1890ff;
+        }
+
+        .settings-card .input-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* ── Grid Cards ── */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 18px 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .card-title {
+            color: #888;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .card-value {
+            font-size: 26px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+        .card-value.small {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .card-value .unit {
+            font-size: 14px;
+            font-weight: 400;
+            color: #888;
+            margin-left: 2px;
+        }
+
+        /* ── Tags ── */
+        .tag {
+            display: inline-block;
+            padding: 2px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin: 2px 4px 2px 0;
+        }
+        .tag-success {
+            background: #f6ffed;
+            color: #52c41a;
+        }
+        .tag-warning {
+            background: #fffbe6;
+            color: #faad14;
+        }
+        .tag-danger {
+            background: #fff2f0;
+            color: #ff4d4f;
+        }
+        .tag-info {
+            background: #e6f7ff;
+            color: #1890ff;
+        }
+        .tag-default {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        /* ── Two Column Layout ── */
+        .two-col {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ── Task List ── */
+        .task-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .task-item:last-child {
+            border-bottom: none;
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .progress-bar {
+            background: #f0f0f0;
+            border-radius: 4px;
+            height: 4px;
+            margin-top: 6px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            background: #1890ff;
+            border-radius: 4px;
+            height: 100%;
+            transition: width 0.4s ease;
+        }
+
+        .task-result {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+            padding: 4px 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-family: monospace;
+            word-break: break-all;
+        }
+
+        /* ── Logs ── */
+        .log-container {
+            background: #1a1a1a;
+            color: #d4d4d4;
+            padding: 14px 16px;
+            border-radius: 12px;
+            max-height: 350px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .log-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .log-container::-webkit-scrollbar-track {
+            background: #2a2a2a;
+            border-radius: 4px;
+        }
+        .log-container::-webkit-scrollbar-thumb {
+            background: #4a4a4a;
+            border-radius: 4px;
+        }
+
+        .log-entry {
+            padding: 2px 0;
+            border-bottom: 1px solid #2a2a2a;
+            display: flex;
+            gap: 12px;
+            align-items: baseline;
+        }
+
+        .log-time {
+            color: #666;
+            min-width: 80px;
+            font-size: 11px;
+        }
+
+        .log-topic {
+            color: #4ecdc4;
+            min-width: 160px;
+            font-weight: 600;
+            font-size: 11px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .log-topic.error {
+            color: #ff6b6b;
+        }
+        .log-topic.response {
+            color: #51cf66;
+        }
+        .log-topic.alert {
+            color: #ffd93d;
+        }
+
+        .log-data {
+            color: #e8e8e8;
+            word-break: break-all;
+            font-size: 11px;
+        }
+
+        /* ── Command Buttons ── */
+        .command-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .command-grid .btn {
+            padding: 10px;
+            font-size: 13px;
+        }
+
+        .command-result {
+            margin-top: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            min-height: 36px;
+            transition: all 0.3s;
+        }
+        .command-result.success {
+            background: #f6ffed;
+            color: #52c41a;
+            border: 1px solid #b7eb8f;
+        }
+        .command-result.error {
+            background: #fff2f0;
+            color: #ff4d4f;
+            border: 1px solid #ffccc7;
+        }
+        .command-result.info {
+            background: #e6f7ff;
+            color: #1890ff;
+            border: 1px solid #91d5ff;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 600px) {
+            .header {
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+            }
+            .header-controls {
+                justify-content: center;
+            }
+            .settings-card {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .settings-card .input-group {
+                flex-wrap: wrap;
+            }
+            .settings-card input {
+                flex: 1;
+                min-width: 100px;
+            }
+            .command-grid {
+                grid-template-columns: 1fr;
+            }
+            .log-entry {
+                flex-wrap: wrap;
+                gap: 4px;
+            }
+            .log-topic {
+                min-width: 100px;
+            }
+        }
+
+        /* ── Alert Banner ── */
+        .alert-banner {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+        }
+        .alert-banner.critical {
+            background: #fff2f0;
+            border-left: 4px solid #ff4d4f;
+            color: #cf1322;
+        }
+        .alert-banner.high {
+            background: #fff7e6;
+            border-left: 4px solid #faad14;
+            color: #d48806;
+        }
+        .alert-banner.medium {
+            background: #e6f7ff;
+            border-left: 4px solid #1890ff;
+            color: #096dd9;
+        }
+        .alert-banner.low {
+            background: #f6ffed;
+            border-left: 4px solid #52c41a;
+            color: #389e0d;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+
+        <!-- ═══ HEADER ═══ -->
+        <div class="header">
+            <h1>🤖 AgroBot MQTT</h1>
+            <div class="header-controls">
+                <span class="msg-count" id="msgCount">📨 0 messages</span>
+                <span class="status-badge disconnected" id="statusBadge">● Disconnected</span>
+                <button class="btn btn-primary" id="connectBtn" onclick="connectMQTT()">Connect</button>
+                <button class="btn btn-danger" id="disconnectBtn" onclick="disconnectMQTT()" disabled>Disconnect</button>
+            </div>
+        </div>
+
+        <!-- ═══ CONNECTION SETTINGS ═══ -->
+        <div class="settings-card">
+            <div class="input-group">
+                <label>Broker:</label>
+                <input id="brokerInput" value="de740a3cc40d4fa89e921c2d6b25ce62.s1.eu.hivemq.cloud" style="width:320px;">
+            </div>
+            <div class="input-group">
+                <label>WebSocket Port:</label>
+                <input id="portInput" value="8884" style="width:70px;">
+            </div>
+            <div class="input-group">
+                <label>Username:</label>
+                <input id="usernameInput" value="Aakash_Kavediya" style="width:150px;">
+            </div>
+            <div class="input-group">
+                <label>Password:</label>
+                <input id="passwordInput" type="password" value="Aakash@2006" style="width:130px;">
+            </div>
+        </div>
+
+        <!-- ═══ ALERT BANNER ═══ -->
+        <div id="alertBanner" style="display:none;"></div>
+
+        <!-- ═══ STATUS GRID ═══ -->
+        <div class="grid" id="statusGrid">
+            <div class="card">
+                <div class="card-title">🤖 Robot Status</div>
+                <div class="card-value" id="robotStatus">--</div>
+                <div style="margin-top:6px;">
+                    <span class="tag tag-default" id="statusTag">--</span>
+                    <span class="tag tag-default" id="taskTag">--</span>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">🔋 Battery</div>
+                <div class="card-value" id="batteryLevel">--<span class="unit">%</span></div>
+            </div>
+            <div class="card">
+                <div class="card-title">📍 Location</div>
+                <div class="card-value small" id="location">--</div>
+            </div>
+            <div class="card">
+                <div class="card-title">⏱️ Last Update</div>
+                <div class="card-value small" id="lastUpdate">--</div>
+            </div>
+        </div>
+
+        <!-- ═══ SENSOR DATA ═══ -->
+        <div class="card" style="margin-bottom:20px;">
+            <h3 style="font-size:16px; margin-bottom:12px;">📊 Sensor Data</h3>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:10px;" id="sensorGrid">
+                <div style="background:#f8f9fa; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between;">
+                    <span style="color:#666; font-size:13px;">🌡️ Temperature</span>
+                    <span style="font-weight:600; font-size:15px;" id="sensorTemp">--°C</span>
+                </div>
+                <div style="background:#f8f9fa; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between;">
+                    <span style="color:#666; font-size:13px;">💧 Humidity</span>
+                    <span style="font-weight:600; font-size:15px;" id="sensorHumidity">--%</span>
+                </div>
+                <div style="background:#f8f9fa; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between;">
+                    <span style="color:#666; font-size:13px;">🌱 Soil Moisture</span>
+                    <span style="font-weight:600; font-size:15px;" id="sensorSoil">--%</span>
+                </div>
+                <div style="background:#f8f9fa; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between;">
+                    <span style="color:#666; font-size:13px;">🧪 Soil pH</span>
+                    <span style="font-weight:600; font-size:15px;" id="sensorPh">--</span>
+                </div>
+                <div style="background:#f8f9fa; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between;">
+                    <span style="color:#666; font-size:13px;">💡 Light Intensity</span>
+                    <span style="font-weight:600; font-size:15px;" id="sensorLight">-- lux</span>
+                </div>
+                <div style="background:#f8f9fa; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between;">
+                    <span style="color:#666; font-size:13px;">💨 Wind Speed</span>
+                    <span style="font-weight:600; font-size:15px;" id="sensorWind">-- km/h</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ TWO COLUMN: TASKS + COMMANDS ═══ -->
+        <div class="two-col">
+            <!-- Tasks -->
+            <div class="card">
+                <h3 style="font-size:16px; margin-bottom:12px;">📋 Recent Tasks</h3>
+                <div id="taskList">
+                    <div style="color:#999; padding:12px 0;">No tasks yet</div>
+                </div>
+            </div>
+
+            <!-- Commands -->
+            <div class="card">
+                <h3 style="font-size:16px; margin-bottom:12px;">🎮 Send Command</h3>
+                <div class="command-grid">
+                    <button class="btn btn-success" onclick="publishCommand('water_plants')">💧 Water Plants</button>
+                    <button class="btn btn-primary" onclick="publishCommand('disease_detection')">🔬 Disease Scan</button>
+                    <button class="btn btn-primary" onclick="publishCommand('survey')">🗺️ Survey</button>
+                    <button class="btn btn-primary" onclick="publishCommand('sensor_reading')">📊 Get Sensors</button>
+                    <button class="btn btn-warning" onclick="publishCommand('checkup_mode')">🩺 Checkup</button>
+                    <button class="btn btn-danger" onclick="publishCommand('stop')">⏹️ Stop</button>
+                </div>
+                <div id="commandResult" class="command-result"></div>
+            </div>
+        </div>
+
+        <!-- ═══ LIVE LOGS ═══ -->
+        <div class="card">
+            <h3 style="font-size:16px; margin-bottom:12px;">📝 Live MQTT Logs</h3>
+            <div class="log-container" id="logContainer">
+                <div class="log-entry">
+                    <span class="log-time">--:--:--</span>
+                    <span class="log-topic">Ready</span>
+                    <span class="log-data">Connect to MQTT to start receiving data</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════ -->
+    <!-- JAVASCRIPT                                            -->
+    <!-- ════════════════════════════════════════════════════════ -->
+    <script>
+        // ============================================================
+        // CONFIGURATION
+        // ============================================================
+
+        // ── HiveMQ Cloud Connection Details ──
+        const MQTT_CONFIG = {
+            broker: 'de740a3cc40d4fa89e921c2d6b25ce62.s1.eu.hivemq.cloud',
+            websocketPort: 8884,
+            username: 'Aakash_Kavediya',
+            password: 'Aakash@2006',
+        };
+
+        // ── Topics to subscribe to ──
+        const SUBSCRIBE_TOPICS = [
+            'agrobot/status',
+            'agrobot/task/update',
+            'agrobot/response',
+            'agrobot/sensors',
+            'agrobot/telemetry',
+            'agrobot/alert',
+            'agrobot/data'
+        ];
+
+        // ── DOM References ──
+        const $ = id => document.getElementById(id);
+
+        const els = {
+            statusBadge: $('statusBadge'),
+            msgCount: $('msgCount'),
+            connectBtn: $('connectBtn'),
+            disconnectBtn: $('disconnectBtn'),
+
+            robotStatus: $('robotStatus'),
+            statusTag: $('statusTag'),
+            taskTag: $('taskTag'),
+            batteryLevel: $('batteryLevel'),
+            location: $('location'),
+            lastUpdate: $('lastUpdate'),
+
+            sensorTemp: $('sensorTemp'),
+            sensorHumidity: $('sensorHumidity'),
+            sensorSoil: $('sensorSoil'),
+            sensorPh: $('sensorPh'),
+            sensorLight: $('sensorLight'),
+            sensorWind: $('sensorWind'),
+
+            taskList: $('taskList'),
+            commandResult: $('commandResult'),
+            logContainer: $('logContainer'),
+            alertBanner: $('alertBanner'),
+
+            brokerInput: $('brokerInput'),
+            portInput: $('portInput'),
+            usernameInput: $('usernameInput'),
+            passwordInput: $('passwordInput'),
+        };
+
+        // ── State ──
+        let mqttClient = null;
+        let isConnected = false;
+        let messageCount = 0;
+        let logs = [];
+        let tasks = [];
+        let alerts = [];
+
+        // ============================================================
+        // CONNECT TO MQTT
+        // ============================================================
+        function connectMQTT() {
+            const broker = els.brokerInput.value.trim() || MQTT_CONFIG.broker;
+            const port = els.portInput.value.trim() || MQTT_CONFIG.websocketPort;
+            const username = els.usernameInput.value.trim() || MQTT_CONFIG.username;
+            const password = els.passwordInput.value.trim() || MQTT_CONFIG.password;
+
+            // WebSocket URL for HiveMQ Cloud
+            const wsUrl = `wss://${broker}:${port}/mqtt`;
+
+            console.log('🔌 Connecting to MQTT:', wsUrl);
+            updateStatus('connecting', 'Connecting...');
+            addLog('info', 'MQTT', `Connecting to ${broker}:${port}...`);
+
+            try {
+                // Disconnect any existing client
+                if (mqttClient) {
+                    try { mqttClient.end(true); } catch (e) {}
+                    mqttClient = null;
+                }
+
+                // Create MQTT client with credentials
+                mqttClient = mqtt.connect(wsUrl, {
+                    clientId: `web_${Math.random().toString(36).substr(2, 10)}`,
+                    username: username,
+                    password: password,
+                    clean: true,
+                    connectTimeout: 30000,
+                    reconnectPeriod: 5000,
+                    keepalive: 60,
+                });
+
+                // ── Event: connect ──
+                mqttClient.on('connect', () => {
+                    console.log('✅ MQTT Connected');
+                    isConnected = true;
+                    updateStatus('connected', 'Connected');
+                    addLog('info', 'MQTT', 'Connected successfully');
+
+                    // Subscribe to all topics
+                    SUBSCRIBE_TOPICS.forEach(topic => {
+                        mqttClient.subscribe(topic, { qos: 1 }, (err) => {
+                            if (err) {
+                                console.error(`❌ Failed to subscribe to ${topic}:`, err);
+                                addLog('error', topic, 'Subscription failed');
+                            } else {
+                                console.log(`✅ Subscribed to: ${topic}`);
+                                addLog('info', topic, 'Subscribed');
+                            }
+                        });
+                    });
+
+                    // Enable/disable buttons
+                    els.connectBtn.disabled = true;
+                    els.disconnectBtn.disabled = false;
+                });
+
+                // ── Event: message ──
+                mqttClient.on('message', (topic, message) => {
+                    try {
+                        const payload = JSON.parse(message.toString());
+                        console.log(`📨 ${topic}:`, payload);
+                        handleMessage(topic, payload);
+                    } catch (e) {
+                        // Handle non-JSON messages
+                        const payload = message.toString();
+                        console.log(`📨 ${topic}:`, payload);
+                        handleMessage(topic, { raw: payload });
+                    }
+                });
+
+                // ── Event: error ──
+                mqttClient.on('error', (err) => {
+                    console.error('❌ MQTT Error:', err);
+                    addLog('error', 'MQTT', err.message || 'Unknown error');
+                    updateStatus('disconnected', 'Error: ' + (err.message || 'Connection failed'));
+                });
+
+                // ── Event: offline ──
+                mqttClient.on('offline', () => {
+                    console.warn('⚠️ MQTT Offline');
+                    isConnected = false;
+                    updateStatus('disconnected', 'Offline');
+                    els.connectBtn.disabled = false;
+                    els.disconnectBtn.disabled = true;
+                });
+
+                // ── Event: reconnect ──
+                mqttClient.on('reconnect', () => {
+                    console.log('🔄 Reconnecting...');
+                    updateStatus('connecting', 'Reconnecting...');
+                });
+
+                // ── Event: close ──
+                mqttClient.on('close', () => {
+                    console.log('🔌 MQTT Connection closed');
+                    isConnected = false;
+                    updateStatus('disconnected', 'Closed');
+                    els.connectBtn.disabled = false;
+                    els.disconnectBtn.disabled = true;
+                });
+
+            } catch (error) {
+                console.error('❌ Connection error:', error);
+                updateStatus('disconnected', 'Error');
+                addLog('error', 'MQTT', error.message || 'Connection failed');
+                els.connectBtn.disabled = false;
+                els.disconnectBtn.disabled = true;
+            }
+        }
+
+        // ============================================================
+        // DISCONNECT
+        // ============================================================
+        function disconnectMQTT() {
+            if (mqttClient) {
+                try {
+                    mqttClient.end(true);
+                } catch (e) {
+                    console.warn('Error disconnecting:', e);
+                }
+                mqttClient = null;
+            }
+            isConnected = false;
+            updateStatus('disconnected', 'Disconnected');
+            addLog('info', 'MQTT', 'Disconnected');
+            els.connectBtn.disabled = false;
+            els.disconnectBtn.disabled = true;
+        }
+
+        // ============================================================
+        // PUBLISH COMMAND
+        // ============================================================
+        function publishCommand(command) {
+            if (!mqttClient || !isConnected) {
+                showCommandResult('❌ Not connected to MQTT broker', 'error');
+                return;
+            }
+
+            const payload = {
+                action: 'execute_task',
+                task_type: command,
+                bot_id: 'web_dashboard',
+                source: 'web_ui',
+                timestamp: new Date().toISOString(),
+                message_id: `cmd_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`
+            };
+
+            const topic = 'agrobot/commands';
+
+            mqttClient.publish(topic, JSON.stringify(payload), { qos: 1 }, (err) => {
+                if (err) {
+                    showCommandResult(`❌ Failed: ${err.message}`, 'error');
+                    addLog('error', topic, `Publish failed: ${err.message}`);
+                } else {
+                    const cmdNames = {
+                        'water_plants': '💧 Water Plants',
+                        'disease_detection': '🔬 Disease Scan',
+                        'survey': '🗺️ Survey',
+                        'sensor_reading': '📊 Get Sensors',
+                        'checkup_mode': '🩺 Checkup',
+                        'stop': '⏹️ Stop'
+                    };
+                    showCommandResult(`✅ Command sent: ${cmdNames[command] || command}`, 'success');
+                    addLog('info', topic, `Published: ${command}`);
+                }
+            });
+        }
+
+        // ============================================================
+        // HANDLE INCOMING MESSAGES
+        // ============================================================
+        function handleMessage(topic, payload) {
+            messageCount++;
+            els.msgCount.textContent = `📨 ${messageCount} messages`;
+
+            const timestamp = new Date().toISOString();
+
+            // Add to logs (truncate if too long)
+            const logData = typeof payload === 'string' ? payload :
+                JSON.stringify(payload).slice(0, 200);
+            addLog('message', topic, logData);
+
+            // ── Route to handler ──
+            if (topic === 'agrobot/status') {
+                handleStatus(payload, timestamp);
+            } else if (topic === 'agrobot/task/update') {
+                handleTask(payload, timestamp);
+            } else if (topic === 'agrobot/response') {
+                handleResponse(payload, timestamp);
+            } else if (topic === 'agrobot/sensors' || topic === 'agrobot/telemetry' || topic === 'agrobot/data') {
+                handleSensors(payload, timestamp);
+            } else if (topic === 'agrobot/alert') {
+                handleAlert(payload, timestamp);
+            } else {
+                // Try to extract sensor data from any topic
+                if (payload.temperature !== undefined || payload.humidity !== undefined ||
+                    payload.soil_moisture !== undefined || payload.moisture !== undefined) {
+                    handleSensors(payload, timestamp);
+                }
+            }
+        }
+
+        // ── Status ──
+        function handleStatus(data, timestamp) {
+            const status = data.robot || data.status || data.state || '--';
+            const task = data.task || data.current_task || data.activity || '--';
+            const battery = data.battery || data.battery_level || data.battery_percentage || data.batt || '--';
+            const location = data.location || data.gps || data.position || data.area || '--';
+
+            els.robotStatus.textContent = status;
+            els.robotStatus.style.color = status === 'ONLINE' ? '#52c41a' :
+                status === 'BUSY' ? '#faad14' :
+                status === 'IDLE' ? '#1890ff' :
+                status === 'OFFLINE' ? '#ff4d4f' : '#666';
+
+            // Status tag
+            const statusLabel = data.status || data.state || 'Idle';
+            const statusClass = statusLabel === 'Idle' ? 'tag-info' :
+                statusLabel === 'Working' || statusLabel === 'Busy' ? 'tag-warning' :
+                statusLabel === 'Error' || statusLabel === 'Offline' ? 'tag-danger' : 'tag-default';
+            els.statusTag.textContent = statusLabel;
+            els.statusTag.className = `tag ${statusClass}`;
+
+            // Task tag
+            const taskLabel = data.task || data.current_task || 'Standby';
+            els.taskTag.textContent = taskLabel;
+            els.taskTag.className = 'tag tag-info';
+
+            // Battery
+            if (battery !== '--') {
+                const batt = parseFloat(battery);
+                if (!isNaN(batt)) {
+                    els.batteryLevel.innerHTML = `${batt}<span class="unit">%</span>`;
+                    els.batteryLevel.style.color = batt > 50 ? '#52c41a' :
+                        batt > 20 ? '#faad14' : '#ff4d4f';
+                } else {
+                    els.batteryLevel.innerHTML = `${battery}<span class="unit">%</span>`;
+                }
+            } else {
+                els.batteryLevel.innerHTML = '--<span class="unit">%</span>';
+            }
+
+            els.location.textContent = location;
+            els.lastUpdate.textContent = new Date(timestamp).toLocaleTimeString();
+
+            // Extract sensors if present
+            if (data.sensors) {
+                handleSensors(data.sensors, timestamp);
+            }
+        }
+
+        // ── Tasks ──
+        function handleTask(data, timestamp) {
+            const task = {
+                id: data.task_id || data.id || Date.now(),
+                type: data.task_type || data.type || data.name || 'Unknown',
+                status: data.status || 'pending',
+                progress: data.progress || data.percentage || 0,
+                result: data.result || data.output || null,
+                error: data.error || data.failure_reason || null,
+                timestamp: timestamp
+            };
+
+            tasks.unshift(task);
+            if (tasks.length > 50) tasks.pop();
+            renderTasks();
+        }
+
+        // ── Response ──
+        function handleResponse(data, timestamp) {
+            const command = data.command || data.action || 'unknown';
+            const status = data.status || 'processed';
+
+            if (status === 'success' || status === 'ok' || status === 'completed') {
+                showCommandResult(`✅ ${command}: ${data.message || data.result || 'Success'}`, 'success');
+            } else if (status === 'error' || status === 'failed') {
+                showCommandResult(`❌ ${command}: ${data.error || data.message || 'Failed'}`, 'error');
+            } else {
+                showCommandResult(`📨 ${command}: ${status}`, 'info');
+            }
+
+            addLog('response', topic, `${command} → ${status}`);
+        }
+
+        // ── Sensors ──
+        function handleSensors(data, timestamp) {
+            const temp = data.temperature !== undefined ? data.temperature : data.temp;
+            const humidity = data.humidity !== undefined ? data.humidity : data.hum;
+            const soilMoisture = data.soil_moisture !== undefined ? data.soil_moisture : data.moisture;
+            const ph = data.soil_pH !== undefined ? data.soil_pH : data.ph;
+            const light = data.light_intensity !== undefined ? data.light_intensity : data.light;
+            const wind = data.wind_speed !== undefined ? data.wind_speed : data.wind;
+
+            if (temp !== undefined && !isNaN(parseFloat(temp))) {
+                els.sensorTemp.textContent = `${parseFloat(temp).toFixed(1)}°C`;
+            }
+            if (humidity !== undefined && !isNaN(parseFloat(humidity))) {
+                els.sensorHumidity.textContent = `${parseFloat(humidity).toFixed(1)}%`;
+            }
+            if (soilMoisture !== undefined && !isNaN(parseFloat(soilMoisture))) {
+                els.sensorSoil.textContent = `${parseFloat(soilMoisture).toFixed(1)}%`;
+            }
+            if (ph !== undefined && !isNaN(parseFloat(ph))) {
+                els.sensorPh.textContent = parseFloat(ph).toFixed(1);
+            }
+            if (light !== undefined && !isNaN(parseFloat(light))) {
+                els.sensorLight.textContent = `${parseFloat(light).toFixed(0)} lux`;
+            }
+            if (wind !== undefined && !isNaN(parseFloat(wind))) {
+                els.sensorWind.textContent = `${parseFloat(wind).toFixed(1)} km/h`;
+            }
+        }
+
+        // ── Alert ──
+        function handleAlert(data, timestamp) {
+            const severity = data.severity || data.level || 'info';
+            const message = data.message || data.msg || 'Alert received';
+            const type = data.type || data.category || 'general';
+
+            alerts.unshift({ severity, message, type, timestamp });
+            if (alerts.length > 20) alerts.pop();
+
+            addLog('alert', topic, `[${severity}] ${message}`);
+
+            // Show alert banner
+            const banner = els.alertBanner;
+            const emoji = severity === 'critical' ? '🚨' :
+                severity === 'high' ? '🔴' :
+                severity === 'medium' ? '🟡' : '🔵';
+
+            banner.style.display = 'block';
+            banner.className = `alert-banner ${severity}`;
+            banner.innerHTML = `
+                    <span style="font-size:20px;">${emoji}</span>
+                    <span>${message}</span>
+                    <span style="margin-left:auto; font-size:11px; opacity:0.7;">
+                        ${new Date(timestamp).toLocaleTimeString()}
+                    </span>
+                    <button onclick="this.parentElement.style.display='none'" 
+                            style="background:none; border:none; font-size:18px; cursor:pointer; opacity:0.6;">
+                        ✕
+                    </button>
+                `;
+
+            // Auto-hide after 10 seconds
+            clearTimeout(banner._hideTimer);
+            banner._hideTimer = setTimeout(() => {
+                banner.style.display = 'none';
+            }, 10000);
+        }
+
+        // ============================================================
+        // RENDER TASKS
+        // ============================================================
+        function renderTasks() {
+            if (tasks.length === 0) {
+                els.taskList.innerHTML = '<div style="color:#999; padding:12px 0;">No tasks yet</div>';
+                return;
+            }
+
+            const statusColors = {
+                'pending': 'tag-warning',
+                'in_progress': 'tag-info',
+                'running': 'tag-info',
+                'completed': 'tag-success',
+                'done': 'tag-success',
+                'failed': 'tag-danger',
+                'error': 'tag-danger',
+                'timeout': 'tag-danger'
+            };
+
+            const html = tasks.slice(0, 15).map(task => `
+                    <div class="task-item">
+                        <div class="task-header">
+                            <div>
+                                <span class="tag ${statusColors[task.status] || 'tag-default'}">${task.status}</span>
+                                <strong style="font-size:13px;">${task.type.replace(/_/g, ' ').toUpperCase()}</strong>
+                            </div>
+                            <span style="font-size:11px; color:#999;">
+                                ${new Date(task.timestamp).toLocaleTimeString()}
+                            </span>
+                        </div>
+                        ${task.progress > 0 ? `
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${Math.min(task.progress, 100)}%"></div>
+                            </div>
+                        ` : ''}
+                        ${task.result ? `<div class="task-result">✅ ${typeof task.result === 'string' ? task.result : JSON.stringify(task.result).slice(0, 80)}</div>` : ''}
+                        ${task.error ? `<div class="task-result" style="color:#ff4d4f;">❌ ${task.error}</div>` : ''}
+                    </div>
+                `).join('');
+
+            els.taskList.innerHTML = html;
+        }
+
+        // ============================================================
+        // SHOW COMMAND RESULT
+        // ============================================================
+        function showCommandResult(message, type) {
+            const el = els.commandResult;
+            el.textContent = message;
+            el.className = 'command-result';
+            if (type === 'success') el.classList.add('success');
+            if (type === 'error') el.classList.add('error');
+            if (type === 'info') el.classList.add('info');
+
+            // Auto-clear after 5 seconds
+            clearTimeout(el._timeout);
+            el._timeout = setTimeout(() => {
+                el.textContent = '';
+                el.className = 'command-result';
+            }, 5000);
+        }
+
+        // ============================================================
+        // UPDATE STATUS
+        // ============================================================
+        function updateStatus(state, text) {
+            const badge = els.statusBadge;
+            badge.className = `status-badge ${state}`;
+            badge.textContent = `● ${text}`;
+        }
+
+        // ============================================================
+        // ADD LOG
+        // ============================================================
+        function addLog(type, topic, data) {
+            const time = new Date().toLocaleTimeString();
+            const logEntry = {
+                time,
+                type,
+                topic: topic.length > 30 ? topic.slice(0, 27) + '...' : topic,
+                data: typeof data === 'string' ? data : JSON.stringify(data)
+            };
+
+            logs.unshift(logEntry);
+            if (logs.length > 200) logs.pop();
+
+            // Debounce render
+            if (!addLog._timer) {
+                addLog._timer = setTimeout(() => {
+                    renderLogs();
+                    addLog._timer = null;
+                }, 50);
+            }
+        }
+
+        function renderLogs() {
+            const container = els.logContainer;
+
+            if (logs.length === 0) {
+                container.innerHTML = `
+                        <div class="log-entry">
+                            <span class="log-time">--:--:--</span>
+                            <span class="log-topic">No logs</span>
+                            <span class="log-data">Waiting for data...</span>
+                        </div>
+                    `;
+                return;
+            }
+
+            const html = logs.slice(0, 50).map(log => {
+                const topicClass = log.type === 'error' ? 'error' :
+                    log.type === 'response' ? 'response' :
+                    log.type === 'alert' ? 'alert' : '';
+                const dataDisplay = log.data.length > 150 ? log.data.slice(0, 150) + '...' : log.data;
+                return `
+                        <div class="log-entry">
+                            <span class="log-time">${log.time}</span>
+                            <span class="log-topic ${topicClass}">${log.topic}</span>
+                            <span class="log-data">${escapeHtml(dataDisplay)}</span>
+                        </div>
+                    `;
+            }).join('');
+
+            container.innerHTML = html;
+            container.scrollTop = 0;
+        }
+
+        // ── Simple escape for HTML safety ──
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ============================================================
+        // AUTO-CONNECT ON LOAD
+        // ============================================================
+        window.onload = function() {
+            // Auto-connect after 1 second
+            setTimeout(connectMQTT, 1000);
+        };
+
+        // ============================================================
+        // KEYBOARD SHORTCUTS
+        // ============================================================
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.target.tagName !== 'INPUT') {
+                // Reconnect if disconnected
+                if (!isConnected) {
+                    connectMQTT();
+                }
+            }
+            if (e.key === 'Escape') {
+                disconnectMQTT();
+            }
+        });
+
+        console.log('🚀 AgroBot MQTT Dashboard loaded');
+        console.log(`📡 Connecting to: ${MQTT_CONFIG.broker}:${MQTT_CONFIG.websocketPort}`);
+        console.log(`📋 Subscribing to: ${SUBSCRIBE_TOPICS.join(', ')}`);
+        console.log(`👤 Username: ${MQTT_CONFIG.username}`);
+    </script>
+
+</body>
+</html>

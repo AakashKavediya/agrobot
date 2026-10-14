@@ -135,14 +135,14 @@ function RobotModelViewer() {
 
       if (model) {
         // SLOWER ROTATION
-        model.rotation.y += 0.0022;
+        model.rotation.y += 0.0050;
       }
 
       renderer.render(scene, camera);
     };
 
     loader.load(
-      "/models/AgroBotModel-v1.glb",
+      "/models/AgroBot_lidar1.glb",
 
       (gltf) => {
         model = gltf.scene;
@@ -308,7 +308,7 @@ export default function SlamBotArchitecture() {
     <div
       className="min-h-screen text-white"
       style={{
-        backgroundColor: "#111111",
+        backgroundColor: "#222222 ",
       }}
     >
       <div className="max-w-[1400px] mx-auto px-10 lg:px-16 py-14">
@@ -368,7 +368,10 @@ export default function SlamBotArchitecture() {
 
         {/* BUTTONS */}
         <div className="flex flex-wrap gap-4 mt-12">
-          <button
+          <a
+            href="https://docs.google.com/document/d/1-SzFw70n3KiYv9Uk06EahBFXuq8CA4FX/edit?usp=sharing&ouid=110589533759563184938&rtpof=true&sd=true"
+            target="_blank"
+            rel="noopener noreferrer"
             className="font-bold text-sm px-6 py-3 rounded-lg text-black"
             style={{
               backgroundColor: "#f5a623",
@@ -383,9 +386,12 @@ export default function SlamBotArchitecture() {
             }
           >
             Structure Documentation
-          </button>
+          </a>
 
-          <button
+          <a
+            href="https://github.com/AakashKavediya/F2F_SIH"
+            target="_blank"
+            rel="noopener noreferrer"
             className="font-semibold text-sm px-6 py-3 rounded-lg text-white transition-colors duration-200"
             style={{
               backgroundColor: "transparent",
@@ -401,7 +407,7 @@ export default function SlamBotArchitecture() {
             }
           >
             GitHub Repository
-          </button>
+          </a>
         </div>
 
       </div>

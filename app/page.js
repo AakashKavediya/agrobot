@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 
-// COMPONENTS
 import IoTDashboard from "@/components/baseDashboard";
 import AgroBotArchitecture from "@/components/architecture";
 import HeroLandingPage from "@/components/heropage";
@@ -12,23 +11,20 @@ import ContactForm from "@/components/ContactForm";
 import AgroBotFooter from "@/components/footer";
 import VideoGallery from "@/components/video";
 import BotImageGallery from "@/components/images";
-export default function Home() {
+import FieldVisit from "@/components/fieldvisit";
+import ProblemStatement from "@/components/ProblemStatement";
+import BotPricing from "@/components/BotPricing";
 
+export default function Home() {
   const [loading, setLoading] = useState(true);
 
-  // 10 SECOND LOADER
   useEffect(() => {
-
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 5000);
-
+    const timer = setTimeout(() => setLoading(false), 5000);
     return () => clearTimeout(timer);
-
   }, []);
 
   return (
-    <div className="relative w-screen max-w-[100vw] overflow-x-hidden bg-black">
+    <div className="relative w-full bg-black overflow-x-clip">
       {loading && (
         <div className="fixed inset-0 z-50 h-screen w-screen overflow-hidden bg-black">
           <PremiumIOSLoader />
@@ -36,45 +32,50 @@ export default function Home() {
       )}
 
       <main
-        className={`w-screen max-w-[100vw] overflow-x-hidden bg-black ${
-          loading ? 'opacity-0 pointer-events-none select-none' : 'opacity-100'
+        className={`w-full bg-black transition-opacity duration-500 ${
+          loading ? "opacity-0 pointer-events-none select-none" : "opacity-100"
         }`}
       >
-        {/* HERO */}
-        <section className="w-screen max-w-[100vw] overflow-hidden">
+        <section className="w-full overflow-x-clip">
           <HeroLandingPage />
         </section>
 
-        {/* DASHBOARD */}
-        <section className="w-screen max-w-[100vw] overflow-hidden">
+        {/* ⚠️ NO overflow-hidden wrapper here — sticky inside needs to escape */}
+        <ProblemStatement />
+
+        <section className="w-full overflow-x-clip">
+          <FieldVisit />
+        </section>
+
+        <section className="w-full overflow-x-clip">
           <IoTDashboard />
         </section>
 
-        {/* ARCHITECTURE */}
-        <section className="w-screen max-w-[100vw] overflow-hidden">
+        <section className="w-full overflow-x-clip">
           <AgroBotArchitecture />
         </section>
-        
-        {/* VIDEO GALLERY */}
-        <section className="w-screen max-w-[100vw] overflow-hidden">
+
+        <section className="w-full overflow-x-clip">
           <VideoGallery />
         </section>
 
-        {/* IMAGE GALLERY */}
-        <section className="w-screen max-w-[100vw] overflow-hidden">
+        <section className="w-full overflow-x-clip">
           <BotImageGallery />
         </section>
 
-        {/* SIMULATION */}
-        <section className="w-screen max-w-[100vw] overflow-hidden">
-          <SmartFarmSimulation />
+          {/* <section className="w-full overflow-x-clip">
+            <SmartFarmSimulation />
+          </section> */}
+
+        <section className="w-full overflow-x-clip">
+          <BotPricing />
         </section>
-        {/* CONTACT */}
-        <section className="w-screen max-w-[100vw] overflow-hidden">
+
+        <section className="w-full overflow-x-clip">
           <ContactForm />
         </section>
-        {/* FOOTER */}
-        <section className="w-screen max-w-[100vw] overflow-hidden">
+
+        <section className="w-full overflow-x-clip">
           <AgroBotFooter />
         </section>
       </main>

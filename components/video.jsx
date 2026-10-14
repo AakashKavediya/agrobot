@@ -6,44 +6,82 @@ import { Volume2, VolumeX } from "lucide-react";
 export default function VideoGallery() {
   const [isMuted, setIsMuted] = useState(true);
   const [hoveredVideo, setHoveredVideo] = useState(null);
-  const videoRefs = [useRef(null), useRef(null), useRef(null)];
+  const videoRefs = useRef([]);
 
   const videos = [
-    {
-      id: 1,
-      title: "AUTONOMOUS NAVIGATION",
-      subtitle: "AI-Powered Field Navigation",
-      description: "AgroBot navigates autonomously through crop rows using advanced computer vision and GPS-guided path planning.",
-      stats: "2.5 km/h · 98% Accuracy",
-      src: "/videos/one.mp4",
-      color: "#FF6B00"
-    },
-    {
-      id: 2,
-      title: "DISEASE DETECTION",
-      subtitle: "Real-time Crop Health Monitoring",
-      description: "Advanced AI algorithms detect early signs of crop diseases with 98% accuracy, enabling immediate treatment response.",
-      stats: "3 sec/plant · 94% Early Detection",
-      src: "/videos/two.mp4",
-      color: "#30D158"
-    },
-    {
-      id: 3,
-      title: "PRECISION SPRAYING",
-      subtitle: "Targeted Treatment System",
-      description: "Precision spraying technology reduces pesticide usage by 60% while maximizing crop protection effectiveness.",
-      stats: "60% Less Waste · 95% Coverage",
-      src: "/videos/three.mp4",
-      color: "#0A84FF"
-    }
-  ];
+  {
+    id: 1,
+    title: "Agrobot Structure",
+    subtitle: "AI-Powered Field Navigation",
+    description:
+      "Explore the AgroBot's physical structure, robotic arm, and field setup designed to support autonomous crop monitoring and precision farming.",
+    stats: "2.5 km/h · 98% Accuracy",
+    src: "/videos/one.mp4",
+    color: "#FF6B00"
+  },
+  {
+    id: 2,
+    title: "SLAM Architecture",
+    subtitle: "Real-Time Mapping & Localization",
+    description:
+      "Visualize the robot's SLAM architecture as it builds a map of its surroundings and estimates its position for autonomous navigation.",
+    stats: "3 sec/plant · 94% Early Detection",
+    src: "/videos/two.mp4",
+    color: "#30D158"
+  },
+  {
+    id: 3,
+    title: "Precision Spraying",
+    subtitle: "Targeted Treatment System",
+    description:
+      "See the targeted treatment system designed to apply pesticides precisely where needed, minimizing chemical waste and protecting healthy crops.",
+    stats: "60% Less Waste · 95% Coverage",
+    src: "/videos/three.mp4",
+    color: "#0A84FF"
+  },
+  {
+    id: 4,
+    title: "Voice Controlled",
+    subtitle: "Intelligent Robot Control",
+    description:
+      "Interact with AgroBot through voice commands to control robot operations and simplify field navigation and farming tasks.",
+    stats: "30% Faster · 99% Accuracy",
+    src: "/videos/four.mp4",
+    color: "#FF375F"
+  },
+  {
+    id: 5,
+    title: "Field Mapping",
+    subtitle: "Real-Time Ground Assessment",
+    description:
+      "Watch AgroBot navigate real-world terrain while mapping its surroundings to support autonomous movement and field assessment.",
+    stats: "5 sec/sample · 97% Precision",
+    src: "/videos/five.mp4",
+    color: "#64D2FF"
+  },
+  {
+    id: 6,
+    title: "Disease Detection",
+    subtitle: "AI-Powered Crop Disease Segmentation",
+    description:
+      "See AI-powered image segmentation identify diseased crop regions using visual masks, enabling localized disease assessment and targeted intervention.",
+    stats: "92% Accuracy · 40% Less Herbicide",
+    src: "/videos/six.mp4",
+    color: "#FFD60A"
+  }
+];
+
+  // Initialize refs array
+  useEffect(() => {
+    videoRefs.current = videoRefs.current.slice(0, videos.length);
+  }, []);
 
   // Auto-play all videos when component mounts
   useEffect(() => {
-    videoRefs.forEach((ref, index) => {
-      if (ref.current) {
-        ref.current.play().catch(e => console.log("Auto-play prevented:", e));
-        ref.current.loop = true;
+    videoRefs.current.forEach((ref) => {
+      if (ref) {
+        ref.play().catch(e => console.log("Auto-play prevented:", e));
+        ref.loop = true;
       }
     });
   }, []);
@@ -51,9 +89,9 @@ export default function VideoGallery() {
   const toggleMute = () => {
     const newMutedState = !isMuted;
     setIsMuted(newMutedState);
-    videoRefs.forEach(ref => {
-      if (ref.current) {
-        ref.current.muted = newMutedState;
+    videoRefs.current.forEach(ref => {
+      if (ref) {
+        ref.muted = newMutedState;
       }
     });
   };
@@ -89,29 +127,29 @@ export default function VideoGallery() {
       <div style={{
         position: "relative",
         zIndex: 10,
-        padding: "32px 48px 0 48px",
-        marginBottom: "24px"
+        padding: "20px 32px 0 32px",
+        marginBottom: "16px"
       }}>
         <div style={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "flex-end",
+          alignItems: "center",
           borderBottom: "1px solid rgba(255,255,255,0.08)",
-          paddingBottom: "20px"
+          paddingBottom: "12px"
         }}>
           <div>
             <div style={{
-              fontSize: "11px",
+              fontSize: "10px",
               fontWeight: "600",
               color: "#FF6B00",
               letterSpacing: "4px",
               textTransform: "uppercase",
-              marginBottom: "8px"
+              marginBottom: "4px"
             }}>
               AGROBOT · AI FARMING SOLUTIONS
             </div>
             <h1 style={{
-              fontSize: "32px",
+              fontSize: "24px",
               fontWeight: "600",
               color: "#fff",
               letterSpacing: "-0.02em",
@@ -128,34 +166,35 @@ export default function VideoGallery() {
               background: "rgba(255,255,255,0.05)",
               border: "1px solid rgba(255,255,255,0.1)",
               borderRadius: "40px",
-              padding: "8px 16px",
+              padding: "6px 14px",
               display: "flex",
               alignItems: "center",
-              gap: "8px",
+              gap: "6px",
               cursor: "pointer",
               transition: "all 0.2s",
               color: "#fff",
-              fontSize: "12px",
+              fontSize: "11px",
               fontWeight: "500"
             }}
             onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}
             onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
           >
-            {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+            {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
             {isMuted ? "Unmute All" : "Mute All"}
           </button>
         </div>
       </div>
 
-      {/* Video Grid */}
+      {/* Video Grid - 3 columns x 2 rows */}
       <div style={{
         position: "relative",
         zIndex: 10,
         display: "grid",
         gridTemplateColumns: "repeat(3, 1fr)",
-        gap: "24px",
-        padding: "0 48px 48px 48px",
-        height: "calc(100vh - 140px)"
+        gridTemplateRows: "1fr 1fr",
+        gap: "12px",
+        padding: "0 32px 20px 32px",
+        height: "calc(100vh - 100px)"
       }}>
         
         {videos.map((video, index) => (
@@ -166,27 +205,28 @@ export default function VideoGallery() {
               flexDirection: "column",
               height: "100%",
               animation: "fadeInUp 0.6s ease-out",
-              animationDelay: `${index * 0.1}s`,
+              animationDelay: `${index * 0.08}s`,
               animationFillMode: "both"
             }}
             onMouseEnter={() => setHoveredVideo(index)}
             onMouseLeave={() => setHoveredVideo(null)}
           >
-            {/* Video Container */}
+            {/* Video Container - Landscape */}
             <div style={{
               position: "relative",
-              borderRadius: "20px",
+              borderRadius: "12px",
               overflow: "hidden",
               background: "#000",
               boxShadow: hoveredVideo === index 
-                ? "0 20px 40px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,107,0,0.3)"
-                : "0 10px 30px rgba(0,0,0,0.3)",
+                ? "0 10px 30px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,107,0,0.3)"
+                : "0 4px 15px rgba(0,0,0,0.3)",
               transition: "all 0.3s ease",
               flex: 1,
-              minHeight: 0
+              minHeight: 0,
+              aspectRatio: "16/9"
             }}>
               <video
-                ref={videoRefs[index]}
+                ref={el => videoRefs.current[index] = el}
                 src={video.src}
                 style={{
                   width: "100%",
@@ -208,29 +248,29 @@ export default function VideoGallery() {
                   background: "linear-gradient(transparent 60%, rgba(0,0,0,0.8) 100%)",
                   display: "flex",
                   alignItems: "flex-end",
-                  padding: "20px",
+                  padding: "12px 16px",
                   transition: "opacity 0.3s"
                 }}>
                   <div style={{
                     display: "flex",
-                    gap: "8px",
+                    gap: "6px",
                     alignItems: "center"
                   }}>
                     <div style={{
-                      width: "32px",
-                      height: "32px",
+                      width: "24px",
+                      height: "24px",
                       borderRadius: "50%",
                       background: "rgba(255,107,0,0.9)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: "12px",
+                      fontSize: "10px",
                       fontWeight: "600",
                       color: "#fff"
                     }}>
                       ▶
                     </div>
-                    <span style={{ fontSize: "12px", color: "#fff" }}>Playing now</span>
+                    <span style={{ fontSize: "11px", color: "#fff" }}>Playing now</span>
                   </div>
                 </div>
               )}
@@ -238,17 +278,17 @@ export default function VideoGallery() {
               {/* Video Stats Badge */}
               <div style={{
                 position: "absolute",
-                top: "12px",
-                right: "12px",
+                top: "8px",
+                right: "8px",
                 background: "rgba(0,0,0,0.7)",
                 backdropFilter: "blur(8px)",
-                padding: "4px 10px",
-                borderRadius: "20px",
-                fontSize: "10px",
+                padding: "2px 8px",
+                borderRadius: "12px",
+                fontSize: "9px",
                 color: video.color,
                 fontFamily: "monospace",
                 fontWeight: "600",
-                letterSpacing: "0.5px"
+                letterSpacing: "0.3px"
               }}>
                 {video.stats}
               </div>
@@ -257,64 +297,71 @@ export default function VideoGallery() {
               {hoveredVideo === index && (
                 <button
                   onClick={() => {
-                    const videoEl = videoRefs[index].current;
-                    videoEl.muted = !videoEl.muted;
-                    // Update global mute state if all videos have same muted status
-                    const allMuted = videoRefs.every(ref => ref.current?.muted);
-                    setIsMuted(allMuted);
+                    const videoEl = videoRefs.current[index];
+                    if (videoEl) {
+                      videoEl.muted = !videoEl.muted;
+                      // Update global mute state if all videos have same muted status
+                      const allMuted = videoRefs.current.every(ref => ref?.muted);
+                      setIsMuted(allMuted);
+                    }
                   }}
                   style={{
                     position: "absolute",
-                    bottom: "12px",
-                    right: "12px",
+                    bottom: "8px",
+                    right: "8px",
                     background: "rgba(0,0,0,0.7)",
                     backdropFilter: "blur(8px)",
                     border: "none",
-                    borderRadius: "30px",
-                    padding: "6px 12px",
+                    borderRadius: "20px",
+                    padding: "4px 10px",
                     display: "flex",
                     alignItems: "center",
-                    gap: "6px",
+                    gap: "4px",
                     cursor: "pointer",
-                    fontSize: "10px",
+                    fontSize: "9px",
                     color: "#fff",
                     transition: "all 0.2s"
                   }}
                 >
-                  {videoRefs[index].current?.muted ? <VolumeX size={12} /> : <Volume2 size={12} />}
-                  {videoRefs[index].current?.muted ? "Unmute" : "Mute"}
+                  {videoRefs.current[index]?.muted ? <VolumeX size={10} /> : <Volume2 size={10} />}
+                  {videoRefs.current[index]?.muted ? "Unmute" : "Mute"}
                 </button>
               )}
             </div>
 
-            {/* Video Info */}
+            {/* Video Info - Compact */}
             <div style={{
-              padding: "16px 8px 8px 8px"
+              padding: "8px 4px 2px 4px"
             }}>
               <div style={{
-                fontSize: "10px",
+                fontSize: "8px",
                 fontWeight: "600",
                 color: video.color,
-                letterSpacing: "2px",
+                letterSpacing: "1.5px",
                 textTransform: "uppercase",
-                marginBottom: "6px"
+                marginBottom: "2px"
               }}>
                 {video.subtitle}
               </div>
               <h3 style={{
-                fontSize: "18px",
+                fontSize: "13px",
                 fontWeight: "600",
                 color: "#fff",
-                marginBottom: "8px",
-                letterSpacing: "-0.3px"
+                marginBottom: "3px",
+                letterSpacing: "-0.2px",
+                lineHeight: "1.2"
               }}>
                 {video.title}
               </h3>
               <p style={{
-                fontSize: "12px",
-                lineHeight: "1.5",
+                fontSize: "10px",
+                lineHeight: "1.3",
                 color: "#aaa",
-                margin: 0
+                margin: 0,
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden"
               }}>
                 {video.description}
               </p>
@@ -326,9 +373,9 @@ export default function VideoGallery() {
       {/* Bottom Decorative Line */}
       <div style={{
         position: "absolute",
-        bottom: "20px",
-        left: "48px",
-        right: "48px",
+        bottom: "10px",
+        left: "32px",
+        right: "32px",
         height: "1px",
         background: "linear-gradient(90deg, transparent, rgba(255,107,0,0.2), transparent)",
         pointerEvents: "none"
@@ -339,7 +386,7 @@ export default function VideoGallery() {
         @keyframes fadeInUp {
           from {
             opacity: 0;
-            transform: translateY(20px);
+            transform: translateY(15px);
           }
           to {
             opacity: 1;
@@ -349,4 +396,4 @@ export default function VideoGallery() {
       `}</style>
     </div>
   );
-}
+} 
