@@ -8,69 +8,68 @@ export default function VideoGallery() {
   const [hoveredVideo, setHoveredVideo] = useState(null);
   const videoRefs = useRef([]);
 
-  const videos = [
+const videos = [
   {
     id: 1,
-    title: "Agrobot Structure",
-    subtitle: "AI-Powered Field Navigation",
+    title: "Precision Robotic Arm",
+    subtitle: "Robotic Arm for Precision Farming",
     description:
-      "Explore the AgroBot's physical structure, robotic arm, and field setup designed to support autonomous crop monitoring and precision farming.",
-    stats: "2.5 km/h · 98% Accuracy",
+      "A robotic arm designed for precision farming operations, enabling targeted interaction with crops for accurate and controlled agricultural tasks.",
+    stats: "Precision Control · Targeted Farming",
     src: "/videos/one.mp4",
     color: "#FF6B00"
   },
   {
     id: 2,
     title: "SLAM Architecture",
-    subtitle: "Real-Time Mapping & Localization",
+    subtitle: "Simultaneous Localization & Mapping",
     description:
-      "Visualize the robot's SLAM architecture as it builds a map of its surroundings and estimates its position for autonomous navigation.",
-    stats: "3 sec/plant · 94% Early Detection",
+      "Visualize AgroBot's SLAM architecture as it maps its surroundings and estimates its position to support autonomous navigation through agricultural environments.",
+    stats: "Real-Time Mapping · Autonomous Navigation",
     src: "/videos/two.mp4",
     color: "#30D158"
   },
   {
     id: 3,
-    title: "Precision Spraying",
-    subtitle: "Targeted Treatment System",
+    title: "All-Terrain Movement",
+    subtitle: "AgroBot in Action on Grass",
     description:
-      "See the targeted treatment system designed to apply pesticides precisely where needed, minimizing chemical waste and protecting healthy crops.",
-    stats: "60% Less Waste · 95% Coverage",
+      "Watch AgroBot move across grassy terrain using its tracked mobility system, demonstrating ground movement and navigation on outdoor surfaces.",
+    stats: "Tracked Mobility · Outdoor Navigation",
     src: "/videos/three.mp4",
     color: "#0A84FF"
   },
   {
     id: 4,
     title: "Voice Controlled",
-    subtitle: "Intelligent Robot Control",
+    subtitle: "Hands-Free Robot Operation",
     description:
-      "Interact with AgroBot through voice commands to control robot operations and simplify field navigation and farming tasks.",
-    stats: "30% Faster · 99% Accuracy",
+      "Control AgroBot using voice commands to make robot operation more intuitive and accessible while simplifying movement and task execution.",
+    stats: "Voice Commands · Hands-Free Control",
     src: "/videos/four.mp4",
     color: "#FF375F"
   },
   {
     id: 5,
-    title: "Field Mapping",
-    subtitle: "Real-Time Ground Assessment",
+    title: "AgroBot Speed Test",
+    subtitle: "Movement & Speed Performance",
     description:
-      "Watch AgroBot navigate real-world terrain while mapping its surroundings to support autonomous movement and field assessment.",
-    stats: "5 sec/sample · 97% Precision",
+      "See AgroBot's movement speed in action as it drives across a surface, demonstrating its mobility, motor response, and real-world movement capabilities.",
+    stats: "Speed Testing · Motor Performance",
     src: "/videos/five.mp4",
     color: "#64D2FF"
   },
   {
     id: 6,
     title: "Disease Detection",
-    subtitle: "AI-Powered Crop Disease Segmentation",
+    subtitle: "AI-Powered Disease Segmentation",
     description:
-      "See AI-powered image segmentation identify diseased crop regions using visual masks, enabling localized disease assessment and targeted intervention.",
-    stats: "92% Accuracy · 40% Less Herbicide",
+      "Detect and visualize diseased regions in crop images using AI-based image segmentation, highlighting affected areas to support targeted crop health assessment.",
+    stats: "AI Detection · Pixel-Level Segmentation",
     src: "/videos/six.mp4",
     color: "#FFD60A"
   }
 ];
-
   // Initialize refs array
   useEffect(() => {
     videoRefs.current = videoRefs.current.slice(0, videos.length);
